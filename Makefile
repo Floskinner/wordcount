@@ -34,6 +34,9 @@ endif
 .PHONY: all
 all: $(TARGETS)
 
+wordcount64: wordcount64.o uint_to_ascii64.o
+	$(LD) $(LDOPT64) -o $@ $^
+
 wordcount64.o : $(INCDIR)/syscall.inc
 
 %64.o : %64.asm
