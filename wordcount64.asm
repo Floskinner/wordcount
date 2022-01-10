@@ -28,8 +28,9 @@ extern  uint_to_ascii
 ;-----------------------------------------------------------------------------
 ; CONSTANTS
 ;-----------------------------------------------------------------------------
-%define BUFFER_SIZE          500 ; max buffer size
+%define BUFFER_SIZE          512 ; max buffer size
 %define CHR_LF               10  ; line feed (LF) character
+%define SPACE                32  ; Highest not printable character
 
 ;-----------------------------------------------------------------------------
 ; Section DATA
@@ -94,7 +95,7 @@ next_string:
         ; rsi: pointer to current character in buffer
         lea     rsi,[buffer]
         mov     ecx,128
-        xor     r8w,r8w   ; bool to safe if last char was printable
+        xor     r8w,r8w                 ; "bool" to safe if last char was printable
 next_char:
         movsx   edx,byte [rsi+rax-1]    ; ptr_current_char + ptr_line-1
         test    edx,edx                 ; test if edx < 128 -> ASCII Char
@@ -103,7 +104,7 @@ next_char:
         ; increment chars for each char
         inc     qword [chars]
 
-        ; increment lines if LF
+        ; increment lines if current char equals LF
         cmp     edx,CHR_LF
         je      increment_lines
 
@@ -112,31 +113,37 @@ back_lines:
         cmp     r8w,[true]              ; check if last char was not printable
         jne     r8w_is_not_set
 
-        cmp     edx,32                  ; jetzige checken ob printable
-        jg      increment_words         ; word 1 hochzählen & r8w = 0 setzen
+        cmp     edx,SPACE               ; check if current char is printable
+        jg      increment_words         ; if greater than last not printable char increment word-counter
+        jmp     back_words
 
 r8w_is_not_set:
-        cmp     edx,33                  ; jetzige checken ob not printable
-        cmovl   r8w,[true]              ; r8w = 1 setzen
+        cmp     edx,SPACE               ; check if current char is printable
+        cmovle  r8w,[true]              ; if less equal than last not printable char set r8w = 1
 
 back_words:
         dec     rax
         jnz     next_char
         jmp     next_string             ; jump back to read next input line
 
-
-; ========= Increment Lines =========
+        ;-----------------------------------------------------------
+        ; increment lines
+        ;-----------------------------------------------------------
 increment_lines:
         inc     qword [lines]
         jmp     back_lines
 
-; ========= Increment Words =========
+        ;-----------------------------------------------------------
+        ; increment words
+        ;-----------------------------------------------------------
 increment_words:
         mov     r8w,[false]
         inc     qword [words]
         jmp     back_words
 
-; ========= Finish Input Loop =========
+        ;-----------------------------------------------------------
+        ; finish input loop
+        ;-----------------------------------------------------------
 finished:
 
         mov     rdi,outstr.lines
